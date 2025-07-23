@@ -6,32 +6,73 @@ execute:
   warning: false
 ---
 
-People's opinions about political leaders often vary based on their personal beliefs and backgrounds. Using 2020 data from the Cooperative Election Study, a national survey of over 60,000 Americans, we explore how political ideology relates to presidential approval.
+People's opinions about political leaders often vary based on their personal beliefs and backgrounds. Using 2020 data from the Cooperative Election Study, a national survey of over 60,000 Americans, we explore how political ideology relates to presidential approval. One limitation of our analysis is that unmeasured factors, like media exposure or recent events, may influence both ideology and approval, potentially biasing our results. We model presidential approval as an ordinal function of political ideology and education to reflect the ordered nature of approval levels and how they relate to respondent characteristics.
+
 
 ```{r}
-#| message: false 
+#| message: false
 library(tidyverse)
 library(primer.data)
+library(broom)
+library(MASS)
+library(parsnip)
+library(easystats)
+library(gt)
 ```
-
 
 ```{r}
-x <- ces |> filter(year == 2020) |> select(approval, education, ideology) |> drop_na() |> slice_sample(n = 2000)
-
-x
+x <- ces |>
+  filter(year == 2020) |>
+  dplyr::select(approval, ideology, education) |>
+  drop_na() |> 
+  filter(!ideology %in% "Not Sure") |> 
+  mutate(ideology = fct_drop(ideology))
 ```
 
+```{r}
+fit_approval <- polr(approval ~ ideology + education, data = x)
+```
+
+```{r}
+fit_approval |> tidy(conf.int = TRUE)
+```
+
+```{r}
+fit_approval |> 
+  tidy(conf.int = TRUE) |>
+  dplyr::select(term, estimate, conf.low, conf.high) |>
+  gt() |>
+  fmt_number(columns = c(estimate, conf.low, conf.high), decimals = 2) |>
+  cols_label(
+    term = "Term",
+    estimate = "Estimate",
+    conf.low = "Lower 95% CI",
+    conf.high = "Upper 95% CI"
+  ) |>
+  tab_header(
+    title = "Model Coefficients and 95% Confidence Intervals"
+  )
+
+```
 
 ```{r}
 x |> ggplot(aes(x = ideology, fill = approval)) + 
   geom_bar() +
   labs(
     title = "Presidential Approval by Political Ideology",
-    subtitle = "Based on 2,000 CES respondents from 2020",
+    subtitle = "Based on 2020 CES Respondents",
     x = "Ideology",
     y = "Count of Respondents",
     fill = "Approval Level",
     caption = "Source: Cooperative Election Study (2020)"
   )
-
 ```
+
+$$
+Y_i = \beta_0 + \beta_1 X_{1i} + \beta_2 X_{2i} + \cdots + \beta_p X_{pi} + \varepsilon_i
+$$
+
+$$
+\hat{Y}_Ki = 0.85 + 0.42 \cdot \text{ideology}_{\text{Liberal}} + 1.10 \cdot \text{ideology}_{\text{Moderate}} + 1.95 \cdot \text{ideology}_{\text{Conservative}} + 2.50 \cdot \text{ideology}_{\text{Very Conservative}} + 0.35 \cdot \text{education}_{\text{High School}} + 0.65 \cdot \text{education}_{\text{Some College}} + 0.90 \cdot \text{education}_{\text{4-Year}} + 1.15 \cdot \text{education}_{\text{Post-Grad}}
+$$
+

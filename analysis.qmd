@@ -1,0 +1,37 @@
+---
+title: "Cumulative"
+format: html
+execute: 
+  echo: false
+  warning: false
+---
+
+People's opinions about political leaders often vary based on their personal beliefs and backgrounds. Using 2020 data from the Cooperative Election Study, a national survey of over 60,000 Americans, we explore how political ideology relates to presidential approval.
+
+```{r}
+#| message: false 
+library(tidyverse)
+library(primer.data)
+```
+
+
+```{r}
+x <- ces |> filter(year == 2020) |> select(approval, education, ideology) |> drop_na() |> slice_sample(n = 2000)
+
+x
+```
+
+
+```{r}
+x |> ggplot(aes(x = ideology, fill = approval)) + 
+  geom_bar() +
+  labs(
+    title = "Presidential Approval by Political Ideology",
+    subtitle = "Based on 2,000 CES respondents from 2020",
+    x = "Ideology",
+    y = "Count of Respondents",
+    fill = "Approval Level",
+    caption = "Source: Cooperative Election Study (2020)"
+  )
+
+```
